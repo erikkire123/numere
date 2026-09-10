@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pula</title>
+<title>Memorează Secvența — Practice</title>
 <style>
   :root{
     --bg-0:#05070a;
@@ -148,7 +148,7 @@
 
   .grid{
     display:grid;
-    grid-template-columns:repeat(5,1fr);
+    grid-template-columns:repeat(4,1fr);
     gap:10px;
   }
   .num{
@@ -305,12 +305,12 @@
 
 <script>
 (function(){
-  const COUNT = 10;                 // numbers 1..10
+  const COUNT = 8;                  // numbers 1..8
   const SHOW_TIME = 550;            // ms each number is lit
   const GAP_TIME = 160;             // ms between numbers
   const SELECT_TIME = 5000;         // ms to answer
-  const MIN_GREEN = 3;
-  const MAX_GREEN = 6;
+  const MIN_GREEN = 1;
+  const MAX_GREEN = 7;
 
   const seqNumber = document.getElementById('seqNumber');
   const ticksWrap = document.getElementById('ticks');
@@ -506,11 +506,9 @@
   document.addEventListener('keydown', (e)=>{
     if(phase !== 'selecting') return;
     const n = Number(e.key);
-    if(n>=1 && n<=9){
+    if(n>=1 && n<=COUNT){
       const el = numEls[n-1];
       togglePick(n, el);
-    } else if(e.key === '0'){
-      togglePick(10, numEls[9]);
     } else if(e.key === 'Enter'){
       submit();
     }
