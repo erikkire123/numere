@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memorează Secvența — Practice</title>
+<style>
+  :root{
+    --bg-0:#05070a;
+    --bg-1:#0b120e;
+    --green:#7bffa0;
+    --green-dim:#3f7a55;
+    --green-glow:rgba(123,255,160,0.55);
+    --amber:#ffcf6b;
+    --red:#ff6b6b;
+    --ink-dim:#5f8a6e;
+    --white:#cfe8d8;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      radial-gradient(circle at 18% 15%, rgba(60,120,80,0.22), transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(20,60,40,0.28), transparent 50%),
+      radial-gradient(circle at 60% 40%, rgba(10,25,18,0.6), transparent 60%),
+      linear-gradient(160deg, var(--bg-0), var(--bg-1) 70%);
+    font-family:'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
+    color:var(--white);
+    padding:24px;
+  }
+  .stage{
+    width:100%;
+    max-width:380px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+  }
+  .prompt{
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:var(--ink-dim);
+    text-align:center;
+    min-height:16px;
+    text-transform:uppercase;
+  }
+  .panel{
+    position:relative;
+    width:100%;
+    background:linear-gradient(180deg, rgba(14,22,16,0.92), rgba(6,10,7,0.96));
+    border:1px solid rgba(123,255,160,0.28);
+    border-radius:18px;
+    padding:20px 20px 18px;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.4),
+      0 20px 60px rgba(0,0,0,0.55),
+      0 0 40px -10px var(--green-glow);
+    overflow:hidden;
+  }
+  .panel::before{
+    content:"";
+    position:absolute;inset:0;
+    background-image:repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px);
+    pointer-events:none;
+  }
+  .header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:6px;
+  }
+  .head-left{
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:0.22em;
+    color:var(--green);
+    text-shadow:0 0 18px var(--green-glow);
+  }
+  .counter{
+    font-size:13px;
+    color:var(--ink-dim);
+    letter-spacing:0.05em;
+  }
+
+  /* --- sequence display --- */
+  .seq-display{
+    height:120px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  .seq-number{
+    font-size:64px;
+    font-weight:700;
+    color:#3a4a3f;
+    text-shadow:none;
+    transition:color .12s ease, text-shadow .12s ease, transform .12s ease;
+    font-variant-numeric: tabular-nums;
+  }
+  .seq-number.lit{
+    color:var(--green);
+    text-shadow:0 0 30px var(--green-glow);
+    transform:scale(1.06);
+  }
+  .seq-ticks{
+    display:flex;
+    gap:6px;
+    justify-content:center;
+    margin:6px 0 16px;
+  }
+  .seq-ticks .t{
+    width:10px;height:4px;
+    border-radius:2px;
+    background:rgba(123,255,160,0.14);
+    transition:background .15s ease;
+  }
+  .seq-ticks .t.done{background:var(--green-dim);}
+  .seq-ticks .t.lit{background:var(--green);}
+
+  .bar-track{
+    height:3px;
+    border-radius:3px;
+    background:rgba(123,255,160,0.12);
+    overflow:hidden;
+    margin-bottom:14px;
+  }
+  .bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--green-dim), var(--green));
+    border-radius:3px;
+  }
+
+  .select-label{
+    font-size:11px;
+    letter-spacing:0.1em;
+    color:var(--ink-dim);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    text-align:center;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:10px;
+  }
+  .num{
+    aspect-ratio:1;
+    border:2px solid var(--green-dim);
+    border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:17px;font-weight:700;
+    color:var(--white);
+    cursor:pointer;
+    user-select:none;
+    -webkit-tap-highlight-color: transparent;
+    transition:border-color .15s ease, background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .num.disabled{
+    cursor:default;
+    opacity:0.4;
+  }
+  .num.picked{
+    border-color:var(--green);
+    background:rgba(123,255,160,0.12);
+    color:var(--green);
+    box-shadow:0 0 14px -3px var(--green-glow);
+  }
+  .num.correct{
+    border-color:var(--green);
+    background:var(--green);
+    color:#05100a;
+    box-shadow:0 0 16px -2px var(--green-glow);
+  }
+  .num.missed{
+    border-color:var(--amber);
+    color:var(--amber);
+    animation:blink .6s ease 2;
+  }
+  .num.wrong{
+    border-color:var(--red);
+    background:rgba(255,107,107,0.16);
+    color:var(--red);
+    animation:shake .28s ease;
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-3px);}
+    75%{transform:translateX(3px);}
+  }
+  @keyframes blink{
+    0%,100%{opacity:1;}
+    50%{opacity:0.35;}
+  }
+
+  .confirm-row{
+    display:flex;
+    justify-content:center;
+    margin-top:14px;
+    min-height:38px;
+  }
+
+  .overlay{
+    position:absolute;inset:0;
+    background:rgba(4,7,5,0.9);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    text-align:center;
+    padding:24px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .overlay .title{font-size:22px;font-weight:700;letter-spacing:0.08em;}
+  .overlay.win .title{color:var(--green);text-shadow:0 0 18px var(--green-glow);}
+  .overlay.fail .title{color:var(--red);}
+  .overlay .sub{font-size:12px;color:var(--ink-dim);letter-spacing:0.05em;}
+
+  .btn{
+    margin-top:6px;
+    background:transparent;
+    border:1px solid var(--green);
+    color:var(--green);
+    font-family:inherit;
+    font-size:12px;
+    letter-spacing:0.12em;
+    padding:10px 22px;
+    border-radius:8px;
+    cursor:pointer;
+    text-transform:uppercase;
+    transition:background .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{
+    background:var(--green);
+    color:#05100a;
+    box-shadow:0 0 20px -4px var(--green-glow);
+  }
+
+  .stats{
+    width:100%;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:11px;
+    color:var(--ink-dim);
+    letter-spacing:0.05em;
+    padding:0 4px;
+  }
+  .stats span b{color:var(--green);font-weight:700;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="prompt" id="prompt">memorează care numere apar verzi, apoi selectează-le jos</div>
+
+  <div class="panel" id="panel">
+    <div class="header">
+      <div class="head-left">MEMOREAZĂ</div>
+      <div class="counter" id="counter">RUNDA 1</div>
+    </div>
+
+    <div class="seq-display"><div class="seq-number" id="seqNumber">–</div></div>
+    <div class="seq-ticks" id="ticks"></div>
+
+    <div class="bar-track"><div class="bar-fill" id="fill"></div></div>
+    <div class="select-label" id="selectLabel">selectează numerele care au fost verzi</div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="confirm-row">
+      <button class="btn" id="confirmBtn" style="visibility:hidden;">Confirmă</button>
+    </div>
+
+    <div class="overlay win" id="overlayWin">
+      <div class="title" id="winTitle">PERFECT</div>
+      <div class="sub" id="winSub">0/0 corecte</div>
+      <button class="btn" id="againBtn">Joacă din nou</button>
+    </div>
+    <div class="overlay fail" id="overlayFail">
+      <div class="title">INCOMPLET</div>
+      <div class="sub" id="failSub">0/0 corecte</div>
+      <button class="btn" id="retryBtn">Reîncearcă</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span>runde perfecte <b id="statPerfect">0</b></span>
+    <span>cea mai lungă serie <b id="statStreak">0</b></span>
+    <span>precizie medie <b id="statAcc">—</b></span>
+  </div>
+
+  <button class="btn" id="startBtn">Start</button>
+</div>
+
+<script>
+(function(){
+  const COUNT = 10;                 // numbers 1..10
+  const SHOW_TIME = 550;            // ms each number is lit
+  const GAP_TIME = 160;             // ms between numbers
+  const SELECT_TIME = 5000;         // ms to answer
+  const MIN_GREEN = 3;
+  const MAX_GREEN = 6;
+
+  const seqNumber = document.getElementById('seqNumber');
+  const ticksWrap = document.getElementById('ticks');
+  const fill = document.getElementById('fill');
+  const grid = document.getElementById('grid');
+  const counter = document.getElementById('counter');
+  const selectLabel = document.getElementById('selectLabel');
+  const confirmBtn = document.getElementById('confirmBtn');
+  const overlayWin = document.getElementById('overlayWin');
+  const overlayFail = document.getElementById('overlayFail');
+  const winTitle = document.getElementById('winTitle');
+  const winSub = document.getElementById('winSub');
+  const failSub = document.getElementById('failSub');
+  const startBtn = document.getElementById('startBtn');
+  const againBtn = document.getElementById('againBtn');
+  const retryBtn = document.getElementById('retryBtn');
+  const prompt = document.getElementById('prompt');
+  const statPerfect = document.getElementById('statPerfect');
+  const statStreak = document.getElementById('statStreak');
+  const statAcc = document.getElementById('statAcc');
+
+  let greenSet = new Set();
+  let picked = new Set();
+  let phase = 'idle'; // idle | playing | selecting | done
+  let round = 1;
+  let perfectCount = 0;
+  let streak = 0;
+  let bestStreak = 0;
+  let accHistory = [];
+  let selectTimer = null;
+  let selectStart = 0;
+  let rafId = null;
+  let numEls = [];
+
+  // build ticks + grid buttons
+  for(let i=1;i<=COUNT;i++){
+    const t = document.createElement('div');
+    t.className = 't';
+    ticksWrap.appendChild(t);
+
+    const b = document.createElement('div');
+    b.className = 'num disabled';
+    b.textContent = i;
+    b.dataset.n = i;
+    b.addEventListener('click', ()=>togglePick(i, b));
+    grid.appendChild(b);
+    numEls.push(b);
+  }
+  const tickEls = [...ticksWrap.children];
+
+  function resetBoard(){
+    numEls.forEach(b=>{
+      b.className = 'num disabled';
+    });
+    tickEls.forEach(t=> t.className = 't');
+    seqNumber.textContent = '–';
+    seqNumber.classList.remove('lit');
+    fill.style.width = '0%';
+    picked = new Set();
+    confirmBtn.style.visibility = 'hidden';
+    overlayWin.classList.remove('show');
+    overlayFail.classList.remove('show');
+  }
+
+  function startRound(){
+    resetBoard();
+    phase = 'playing';
+    counter.textContent = 'RUNDA ' + round;
+    prompt.textContent = 'privește secvența...';
+    selectLabel.textContent = 'selectează numerele care au fost verzi';
+
+    greenSet = new Set();
+    const howMany = MIN_GREEN + Math.floor(Math.random()*(MAX_GREEN-MIN_GREEN+1));
+    const pool = Array.from({length:COUNT},(_,i)=>i+1);
+    for(let i=0;i<howMany;i++){
+      const idx = Math.floor(Math.random()*pool.length);
+      greenSet.add(pool.splice(idx,1)[0]);
+    }
+
+    playSequence(1);
+  }
+
+  function playSequence(n){
+    if(n > COUNT){
+      setTimeout(beginSelection, 250);
+      return;
+    }
+    const isGreen = greenSet.has(n);
+    seqNumber.textContent = n;
+    seqNumber.classList.toggle('lit', isGreen);
+    tickEls[n-1].classList.add('lit');
+
+    setTimeout(()=>{
+      tickEls[n-1].classList.remove('lit');
+      tickEls[n-1].classList.add('done');
+      seqNumber.classList.remove('lit');
+      setTimeout(()=>playSequence(n+1), GAP_TIME);
+    }, SHOW_TIME);
+  }
+
+  function beginSelection(){
+    phase = 'selecting';
+    prompt.textContent = 'ai 5 secunde — selectează numerele verzi';
+    seqNumber.textContent = '?';
+    numEls.forEach(b=> b.classList.remove('disabled'));
+    confirmBtn.style.visibility = 'visible';
+    selectStart = performance.now();
+    tickSelect();
+  }
+
+  function tickSelect(){
+    const elapsed = performance.now() - selectStart;
+    const remain = Math.max(0, SELECT_TIME - elapsed);
+    fill.style.width = (remain/SELECT_TIME*100) + '%';
+    if(remain <= 0){
+      submit();
+      return;
+    }
+    rafId = requestAnimationFrame(tickSelect);
+  }
+
+  function togglePick(n, el){
+    if(phase !== 'selecting') return;
+    if(picked.has(n)){
+      picked.delete(n);
+      el.classList.remove('picked');
+    } else {
+      picked.add(n);
+      el.classList.add('picked');
+    }
+  }
+
+  function submit(){
+    if(phase !== 'selecting') return;
+    phase = 'done';
+    cancelAnimationFrame(rafId);
+    fill.style.width = '0%';
+    confirmBtn.style.visibility = 'hidden';
+
+    let correct = 0;
+    numEls.forEach(b=>{
+      const n = Number(b.dataset.n);
+      b.classList.remove('picked','disabled');
+      const wasGreen = greenSet.has(n);
+      const wasPicked = picked.has(n);
+      if(wasGreen && wasPicked){ b.classList.add('correct'); correct++; }
+      else if(wasGreen && !wasPicked){ b.classList.add('missed'); }
+      else if(!wasGreen && wasPicked){ b.classList.add('wrong'); }
+      b.classList.add('disabled');
+    });
+
+    const total = greenSet.size;
+    const accuracy = Math.round((correct/total)*100);
+    accHistory.push(accuracy);
+    const avgAcc = Math.round(accHistory.reduce((a,b)=>a+b,0)/accHistory.length);
+    statAcc.textContent = avgAcc + '%';
+
+    const perfect = correct === total && picked.size === total;
+
+    setTimeout(()=>{
+      if(perfect){
+        streak++;
+        perfectCount++;
+        bestStreak = Math.max(bestStreak, streak);
+        statPerfect.textContent = perfectCount;
+        statStreak.textContent = bestStreak;
+        winTitle.textContent = streak > 1 ? ('SERIE x' + streak) : 'PERFECT';
+        winSub.textContent = correct + '/' + total + ' corecte';
+        overlayWin.classList.add('show');
+      } else {
+        streak = 0;
+        failSub.textContent = correct + '/' + total + ' corecte';
+        overlayFail.classList.add('show');
+      }
+    }, 500);
+  }
+
+  function nextRound(){
+    round++;
+    startRound();
+  }
+
+  function restart(){
+    round = 1;
+    startRound();
+  }
+
+  startBtn.addEventListener('click', ()=>{ startBtn.blur(); restart(); });
+  confirmBtn.addEventListener('click', submit);
+  againBtn.addEventListener('click', nextRound);
+  retryBtn.addEventListener('click', ()=>{ startRound(); });
+
+  document.addEventListener('keydown', (e)=>{
+    if(phase !== 'selecting') return;
+    const n = Number(e.key);
+    if(n>=1 && n<=9){
+      const el = numEls[n-1];
+      togglePick(n, el);
+    } else if(e.key === '0'){
+      togglePick(10, numEls[9]);
+    } else if(e.key === 'Enter'){
+      submit();
+    }
+  });
+})();
+</script>
+</body>
+</html>
